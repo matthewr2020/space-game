@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar System Explorer: Planet Matcher</title>
+
+  <style>
+    :root {
+      --space-black: #05070a;
+      --star-white: #ffffff;
+      --orbit-blue: #2a3d66;
+      --success-green: #44ff44;
+      --text-gold: #ffd700;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: var(--space-black);
+      background-image:
+        radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+        radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px);
+      background-size: 550px 550px, 350px 350px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    /* Prevent text selection without breaking drag */
+    body, .slot, .planet-label {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    h1 {
+      color: var(--text-gold);
+      font-size: 3rem;
+      margin-bottom: 5px;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+
+    p {
+      font-size: 1.4rem;
+      margin: 0 0 14px;
+      text-align: center;
+    }
+
+    #hint-btn {
+      padding: 16px 28px;
+      font-size: 1.3rem;
+      background: var(--text-gold);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 0 0 22px;
+    }
+
+    #game-board {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 40px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    #planet-source {
+      flex-basis: 100%;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      min-height: 120px;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+    }
+
+    .slot {
+      width: 240px;
+      height: 160px;
+      background: rgba(42, 61, 102, 0.3);
+      border: 3px solid var(--orbit-blue);
+      border-radius: 25px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    .slot-hinting {
+        border-color: ver(--text-gold);
+    }
+
+    .slot.hovered {
+      background: rgba(42, 61, 102, 0.6);
+      transform: scale(1.05);
+      border-color: var(--text-gold);
+    }
+
+    .slot.correct {
+      border-color: var(--success-green);
+      background: rgba(68, 255, 68, 0.1);
+    }
+
+    .planet-label {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-top: 10px;
+      color: var(--text-gold);
+      pointer-events: none;
+    }
+
+    .planet {
+      width: 90px;
+      height: 90px;
+      cursor: grab;
+      transition: transform 0.2s;
+      z-index: 10;
+      object-fit: contain;
+    }
+
+    .planet:active {
+      cursor: grabbing;
+      transform: scale(1.2);
+    }
+
+    .planet.placed {
+      cursor: default;
+      pointer-events: none;
+      width: 80px;
+      height: 80px;
+    }
+
+    /* Tap-to-select highlight */
+    .planet.selected {
+      outline: 4px solid var(--text-gold);
+      border-radius: 50%;
+      box-shadow: 0 0 18px rgba(255, 215, 0, 0.6);
+      transform: scale(1.15);
+    }
+
+    #victory-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1a1a1a;
+      padding: 50px;
+      border-radius: 40px;
+      border: 6px solid var(--text-gold);
+      text-align: center;
+      z-index: 1000;
+      box-shadow: 0 0 50px rgba(0,0,0,0.8);
+      max-width: 720px;
+      width: calc(100% - 40px);
+      box-sizing: border-box;
+    }
+
+    button.play-again {
+      padding: 20px 40px;
+      font-size: 1.5rem;
+      background: var(--text-gold);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+
+    /* Credits block */
+    #credits {
+      margin-top: 26px;
+      max-width: 1100px;
+      font-size: 0.95rem;
+      line-height: 1.45;
+      opacity: 0.9;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-sizing: border-box;
+    }
+
+    #credits a {
+      color: var(--text-gold);
+      text-decoration: none;
+      border-bottom: 1px dotted rgba(255, 215, 0, 0.5);
+    }
+
+    #credits a:hover {
+      border-bottom-style: solid;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Space Match!</h1>
+  <p>Move the planets to the right names!</p>
+
+  <button id="hint-btn" type="button">Hint</button>
+
+  <div id="game-board">
+    <div id="planet-source"></div>
+  </div>
+
+  <div id="victory-modal">
+    <h2 style="font-size: 3rem; color: gold;">🚀 GREAT JOB! 🚀</h2>
+    <p style="font-size: 1.5rem;">You are a Solar System Expert!</p>
+    <button class="play-again" onclick="window.location.reload()">Play Again</button>
+  </div>
+
+  <!-- Credits required by licenses -->
+  <div id="credits" aria-label="Image credits">
+    <strong>Image credits:</strong><br />
+
+    <strong>Planets (Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune)</strong> —
+    PNG renders by
+    <a href="https://commons.wikimedia.org/wiki/User:Jcpag2012" target="_blank" rel="noopener">Jcpag2012</a>,
+    licensed under
+    <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>:
+    <a href="https://commons.wikimedia.org/wiki/File:3D_Mercury.png" target="_blank" rel="noopener">Mercury</a>,
+    <a href="https://commons.wikimedia.org/wiki/File:3D_Venus.png" target="_blank" rel="noopener">Venus</a>,
+    <a href="https://commons.wikimedia.org/wiki/File:3D_Mars.png" target="_blank" rel="noopener">Mars</a>,
+    <a href="https://commons.wikimedia.org/wiki/File:3D_Jupiter.png" target="_blank" rel="noopener">Jupiter</a>,
+    <a href="https://commons.wikimedia.org/wiki/File:3D_Saturn.png" target="_blank" rel="noopener">Saturn</a>,
+    <a href="https://commons.wikimedia.org/wiki/File:3D_Uranus.png" target="_blank" rel="noopener">Uranus</a>,
+    <a href="https://commons.wikimedia.org/wiki/File:3D_Neptune.png" target="_blank" rel="noopener">Neptune</a>.
+    <br />
+
+    <strong>Earth</strong> —
+    “The Earth seen from Apollo 17 with transparent background” by
+    <a href="https://commons.wikimedia.org/wiki/NASA" target="_blank" rel="noopener">NASA</a>
+    (Public Domain):
+    <a href="https://commons.wikimedia.org/wiki/File:The_Earth_seen_from_Apollo_17_with_transparent_background.png" target="_blank" rel="noopener">Earth image</a>.
+  </div>
+
+  <audio id="sound-success" src="https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/water_droplet.mp3"></audio>
+  <audio id="sound-win" src="https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/bell_ring.mp3"></audio>
+  <audio id="sound-wrong" src="https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/beer_can_opening.mp3"></audio>
+
+  <script>
+
+    let lastInteractedPlanetId = null; // works for drag + tap
+    // Planet assets (see credits above)
+    const planets = [
+      { id: "mercury", name: "Mercury", img: "https://commons.wikimedia.org/wiki/Special:FilePath/3D_Mercury.png" },
+      { id: "venus",   name: "Venus",   img: "https://commons.wikimedia.org/wiki/Special:FilePath/3D_Venus.png" },
+      { id: "earth",   name: "Earth",   img: "https://commons.wikimedia.org/wiki/Special:FilePath/The_Earth_seen_from_Apollo_17_with_transparent_background.png" },
+      { id: "mars",    name: "Mars",    img: "https://commons.wikimedia.org/wiki/Special:FilePath/3D_Mars.png" },
+      { id: "jupiter", name: "Jupiter", img: "https://commons.wikimedia.org/wiki/Special:FilePath/3D_Jupiter.png" },
+      { id: "saturn",  name: "Saturn",  img: "https://commons.wikimedia.org/wiki/Special:FilePath/3D_Saturn.png" },
+      { id: "uranus",  name: "Uranus",  img: "https://commons.wikimedia.org/wiki/Special:FilePath/3D_Uranus.png" },
+      { id: "neptune", name: "Neptune", img: "https://commons.wikimedia.org/wiki/Special:FilePath/3D_Neptune.png" }
+    ];
+
+    let matched = 0;
+    let selectedPlanetId = null;
+
+    function init() {
+      const source = document.getElementById('planet-source');
+      const board = document.getElementById('game-board');
+
+      // Reset board in case of reload in some embedded contexts
+      source.innerHTML = "";
+
+      // Shuffle planets in the source pile
+      const shuffled = [...planets].sort(() => Math.random() - 0.5);
+
+      shuffled.forEach(p => {
+        const img = document.createElement('img');
+        img.src = p.img;
+        img.alt = p.name;
+        img.className = 'planet';
+        img.id = p.id;
+        img.draggable = true;
+        img.addEventListener('dragstart', dragStart);
+        img.addEventListener('mousedown', () => { lastInteractedPlanetId = img.id; });
+        img.addEventListener('touchstart', () => { lastInteractedPlanetId = img.id; }, { passive: true });
+        source.appendChild(img);
+      });
+
+      // Create slots
+      planets.forEach(p => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.dataset.id = p.id;
+        slot.innerHTML = `<span class="planet-label">${p.name}</span>`;
+        slot.addEventListener('dragover', dragOver);
+        slot.addEventListener('dragleave', dragLeave);
+        slot.addEventListener('drop', handleDrop);
+        board.appendChild(slot);
+      });
+
+      enableTapPlay();
+      setupHintButton();
+    }
+
+    // DRAG & DROP (desktop)
+    function dragStart(e) {
+      const id = e.target.id;
+      e.dataTransfer.setData('text/plain', id);
+      e.dataTransfer.effectAllowed = 'move';
+
+      // Force a consistent drag 'ghost' image (works around Safari/CORS/large PNG issues)
+      const ghost = e.target.cloneNode(true);
+      ghost.style.width = '90px';
+      ghost.style.height = '90px';
+      ghost.style.position = 'absolute';
+      ghost.style.top = '-1000px';
+      ghost.style.left = '-1000px';
+      ghost.style.pointerEvents = 'none';
+      ghost.style.opacity = '1';
+
+      document.body.appendChild(ghost);
+
+      // Center the ghost under the cursor
+      e.dataTransfer.setDragImage(ghost, 45, 45);
+
+      // Remove immediately after drag starts
+      setTimeout((() => document.body.removeChild(ghost), 0));
+    }
+
+    function dragOver(e) {
+      e.preventDefault();
+      this.classList.add('hovered');
+    }
+
+    function dragLeave() {
+      this.classList.remove('hovered');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      this.classList.remove('hovered');
+
+      const planetId = e.dataTransfer.getData('text/plain');
+      const slotId = this.dataset.id;
+
+      if (planetId === slotId) {
+        placePlanetCorrectly(planetId, this);
+      } else {
+        wrongFeedback(this);
+      }
+    }
+
+    // TAP PLAY (mobile + also works on desktop)
+    function enableTapPlay() {
+      // Tap a planet to select it
+      document.querySelectorAll('.planet').forEach(img => {
+        img.addEventListener('click', () => {
+          if (img.classList.contains('placed')) return;
+
+          document.querySelectorAll('.planet').forEach(p => p.classList.remove('selected'));
+          selectedPlanetId = img.id;
+          lastInteractedPlanetId = img.id;
+          img.classList.add('selected');
+        });
+      });
+
+      // Tap a slot to place selected planet (if correct)
+      document.querySelectorAll('.slot').forEach(slot => {
+        slot.addEventListener('click', () => {
+          if (!selectedPlanetId) return;
+
+          const slotId = slot.dataset.id;
+          if (selectedPlanetId === slotId) {
+            placePlanetCorrectly(selectedPlanetId, slot);
+            selectedPlanetId = null;
+          } else {
+            wrongFeedback(slot);
+          }
+        });
+      });
+    }
+
+    // Hint button (works best with tap-selected planet)
+    function setupHintButton() {
+      const hintBtn = document.getElementById('hint-btn');
+      hintBtn.addEventListener('click', () => {
+        const idToHint = selectedPlanetId || lastInteractedPlanetId;
+
+        if (!idToHint) {
+            // No planet chosen yet - animate the source area to guide them
+            const source = document.getElementById('plant-source');
+            source.animate(
+                [
+                    { transform: 'scale(1)' },
+                    { transform: 'scale(1.03)' },
+                    { transform: 'scale(1)' }
+                ],
+                { duration: 320 }
+            );
+            return;
+        }
+
+        const slot = document.querySelector(`.slot[data-id="${idToHint}"]`);
+        if (!slot) return;
+
+        slot.animate(
+          [
+            { boxShadow: '0 0 0 rgba(255,215,0,0)' },
+            { boxShadow: '0 0 34px rgba(255,215,0,0.9)' },
+            { boxShadow: '0 0 0 rgba(255,215,0,0)' }
+          ],
+          { duration: 750 }
+        );
+      });
+    }
+
+    // Shared helpers
+    function placePlanetCorrectly(planetId, slotEl) {
+      const planet = document.getElementById(planetId);
+      if (!planet || planet.classList.contains('placed')) return;
+
+      planet.classList.remove('selected');
+      planet.classList.add('placed');
+      planet.draggable = false;
+
+      slotEl.prepend(planet);
+      slotEl.classList.add('correct');
+
+      document.getElementById('sound-success').play();
+      matched++;
+
+      if (matched === planets.length) {
+        setTimeout(() => {
+          document.getElementById('sound-win').play();
+          document.getElementById('victory-modal').style.display = 'block';
+        }, 500);
+      }
+    }
+
+    function wrongFeedback(slotEl) {
+      try { document.getElementById('sound-wrong').play(); } catch {}
+
+      slotEl.animate(
+        [
+          { transform: 'translateX(0)' },
+          { transform: 'translateX(-8px)' },
+          { transform: 'translateX(8px)' },
+          { transform: 'translateX(0)' }
+        ],
+        { duration: 250 }
+      );
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
