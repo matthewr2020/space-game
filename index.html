@@ -202,6 +202,154 @@
     #credits a:hover {
       border-bottom-style: solid;
     }
+
+    /* =============================
+      Mobile + Tablet Responsiveness
+      ============================== */
+    h1 {
+      font-size: clamp(2rem, 6vw, 3rem);
+    }
+
+    p {
+      font-size: clamp(1.05rem, 3.6vw, 1.4rem);
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 14px;
+      }
+
+      #game-board {
+        gap: 18px;
+      }
+
+      #planet-source {
+        padding: 14px;
+        gap:14px;
+        min-height: 96px;
+      }
+
+      .slot {
+        width: min(46vw, 260px);
+        height: 150px;
+        border-radius: 22px;
+      }
+
+      .planet-label {
+        font-size: 1.55rem;
+      }
+
+      .planet {
+        width: 84px;
+        height: 84px;
+      }
+
+      .planet.placed {
+        width: 74px;
+        height: 74px;
+      }
+
+      #hint-btn {
+        font-size: 1.2rem;
+        padding: 14px 22px;
+      }
+
+      #victory-modal {
+        padding: 28px;
+        border-radius: 28px;
+
+      }
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding: 12px;
+      }
+
+      #game-board {
+        gap: 14px;
+      }
+
+      #planet-source {
+        padding: 12px;
+        gap:12px;
+        border-radius: 16px;
+      }
+
+      .slot {
+        width: 100%;
+        max-width: 420px;
+        height: 130px;
+        border-radius: 20px;
+      }
+
+      .planet-label {
+        font-size: 1.4rem;
+        margin-top: 8px;
+      }
+
+      .planet {
+        width: 88px;
+        height: 88px;
+      }
+
+      .planet.placed {
+        width: 78px;
+        height: 78px;
+      }
+
+      #hint-btn {
+        width: 100%;
+        max-width: 420px;
+        padding: 14px 18px;
+        border-radius: 16px;
+      }
+
+      #victory-modal h2 {
+        font-size: 2.2rem !important;
+      }
+
+      #victory-modal p {
+        font-size: 1.2rem !important;
+      }
+
+      button.play-again {
+        width: 100%;
+        max-width: 420px;
+        border-radius: 16px;
+        padding: 16px 18px;
+        font-size: 1.2rem;
+      }
+
+      #credits {
+        font-size: 0.85rem;
+        padding: 12px 12px;
+        border-radius: 12px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slot, .planet {
+        transition: none !important;
+      }
+    }
+
+    @media (max-width: 520px) {
+      #planet-source {
+        position: sticky;
+        top: 10px;
+        z-index: 50;
+        background: rgba(10, 12, 18, 0.75);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+      }
+
+      #game-board {
+        padding-bottom: 24px;
+      }
+    }
   </style>
 </head>
 
